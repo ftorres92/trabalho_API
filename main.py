@@ -1,7 +1,6 @@
 import os
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Form
 from pydantic import BaseModel
-from typing import Dict
 from groq import Groq
 from dotenv import load_dotenv
 
@@ -19,14 +18,11 @@ if not API_KEY:
 
 client = Groq(api_key=API_KEY)
 
-# Armazena os resumos dos acórdãos temporariamente
-resumos_acordaos = {}
+# Modelo de entrada unificado
+class AcordaosInput(BaseModel):
+    acordao_1: str
+    acordao_2: str
 
-# Modelos de entrada
-class AcordaoInput(BaseModel):
-    texto: str
-
-# Função para executar prompts na LLM
 def executar_prompt(prompt: str) -> str:
     """
     Envia um prompt para a Groq LLM e retorna a resposta gerada.
@@ -38,21 +34,18 @@ def executar_prompt(prompt: str) -> str:
             stream=False,
         )
         return response.choices[0].message.content
-
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro na LLM: {str(e)}")
 
-
-@app.post("/analisar_acordao_1")
-def analisar_acordao_1(acordao: AcordaoInput):
+def gerar_resumo(acordao: str = Form (...)) -> str:
     """
-    Analisa e resume o primeiro acórdão utilizando a LLM.
+    Gera o resumo de um acórdão utilizando a LLM.
     """
     prompt = f"""
     Você é um assistente jurídico especializado em análise de acórdãos.
     
     **Acórdão a ser analisado:**
-    {acordao.texto}
+    {acordao}
 
     **Tarefa:** 
     1. Resuma os fatos relevantes do acórdão.
@@ -66,66 +59,25 @@ def analisar_acordao_1(acordao: AcordaoInput):
     - Normas Aplicadas:
     - Decisão Final:
     """
-
-    resumo = executar_prompt(prompt)
-
-    # Salva o resumo em memória
-    resumos_acordaos["acordao_1"] = resumo
-
-    return {"resumo_acordao_1": resumo, "mensagem": "Primeiro acórdão processado. Envie o segundo acórdão."}
-
-
-@app.post("/analisar_acordao_2")
-def analisar_acordao_2(acordao: AcordaoInput):
-    """
-    Analisa e resume o segundo acórdão utilizando a LLM.
-    """
-    prompt = f"""
-    Você é um assistente jurídico especializado em análise de acórdãos.
-    
-    **Acórdão a ser analisado:**
-    {acordao.texto}
-
-    **Tarefa:** 
-    1. Resuma os fatos relevantes do acórdão.
-    2. Identifique as principais alegações das partes.
-    3. Explique quais normas jurídicas foram aplicadas.
-    4. Apresente a decisão final do tribunal.
-
-    **Formato da resposta:** 
-    - Fatos Relevantes:
-    - Alegações Principais:
-    - Normas Aplicadas:
-    - Decisão Final:
-    """
-
-    resumo = executar_prompt(prompt)
-
-    # Salva o resumo em memória
-    resumos_acordaos["acordao_2"] = resumo
-
-    return {"resumo_acordao_2": resumo, "mensagem": "Segundo acórdão processado. Agora você pode comparar os acórdãos."}
-
+    return executar_prompt(prompt)
 
 @app.post("/comparar_acordaos")
-def comparar_acordaos():
+def comparar_acordaos(acordaos: AcordaosInput):
     """
-    Compara os dois acórdãos armazenados e identifica divergências utilizando a LLM.
+    Recebe dois acórdãos, gera os resumos de cada um e realiza a análise comparativa.
     """
-    # Recupera os resumos armazenados
-    resumo_1 = resumos_acordaos.get("acordao_1", "")
-    resumo_2 = resumos_acordaos.get("acordao_2", "")
-
-    if not resumo_1 or not resumo_2:
-        raise HTTPException(status_code=400, detail="Os resumos dos dois acórdãos ainda não foram gerados.")
-
-    prompt = f"""
+    # Gera os resumos para cada acórdão
+    resumo_1 = gerar_resumo(acordaos.acordao_1)
+    resumo_2 = gerar_resumo(acordaos.acordao_2)
+    
+    # Cria o prompt para comparação
+    prompt_comparativo = f"""
     Você é um assistente jurídico especializado em análise comparativa de acórdãos.
     
-    **Acórdão 1:** 
+    **Acórdão 1 (Resumo):** 
     {resumo_1}
 
-    **Acórdão 2:** 
+    **Acórdão 2 (Resumo):** 
     {resumo_2}
 
     **Tarefa:** 
@@ -141,7 +93,7 @@ def comparar_acordaos():
     - Divergência na Decisão Final:
     - **Tabela Comparativa:**
     """
-
-    analise = executar_prompt(prompt)
-
+    
+    analise = executar_prompt(prompt_comparativo)
+    
     return {"analise_comparativa": analise, "mensagem": "Comparação concluída com sucesso!"}
