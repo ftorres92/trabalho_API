@@ -1,5 +1,21 @@
 # API de Análise Comparativa de Acórdãos
 
+API criada para auxiliar na interposição de Recurso Especial com base no dissídio jurisprudencial, nos termos do artigo 105, III, "c", da Constituição Federal.
+
+**Suas principais funções incluem:**
+
+Analisar e resumir dois acórdãos fornecidos pelo usuário, identificando semelhanças e diferenças nos fatos e na fundamentação jurídica.
+
+Comparar a interpretação da lei federal em cada decisão, verificando se houve divergência entre os tribunais.
+
+Apresentar um cotejo analítico, conforme determina o art. 1.029, §1º, do CPC, demonstrando que casos semelhantes receberam tratamentos distintos.
+
+Elaborar uma tabela comparativa para facilitar a visualização do dissídio jurisprudencial.
+
+Fornecer os elementos necessários para justificar a interposição do Recurso Especial perante o STJ.
+
+---
+
 Esta API permite comparar acórdãos jurídicos através de dois métodos de entrada:
 
 - **Versão TEXTO:** Envio dos acórdãos como conteúdo textual via formulário.
