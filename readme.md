@@ -1,45 +1,91 @@
-1. Inserção do Primeiro Acórdão
-Solicitação do Documento:
-Inicialmente, é solicitado que o usuário forneça o primeiro acórdão judicial a ser analisado.
-Resumo do Primeiro Acórdão:
-Após o recebimento, será elaborado um resumo detalhado contendo:
-Fatos Relevantes: Exposição dos acontecimentos e circunstâncias que originaram o litígio.
-Alegações Principais: Resumo dos argumentos apresentados pelas partes.
-Fundamentos Jurídicos: Descrição dos dispositivos legais e artigos invocados para embasar as alegações (devendo mencionar todos os artigos pertinentes).
-Decisão Final: Síntese do entendimento e da conclusão do tribunal.
-2. Inserção do Segundo Acórdão
-Solicitação do Documento:
-Em seguida, será solicitado o segundo acórdão judicial.
-Resumo do Segundo Acórdão:
-Assim como no primeiro, será preparado um resumo com os mesmos elementos:
-Fatos Relevantes
-Alegações Principais
-Fundamentos Jurídicos (com referência aos artigos)
-Decisão Final
-Confirmação para a Comparação:
-Após o resumo do segundo acórdão, será questionado se o usuário autoriza a realização da comparação entre os dois acórdãos.
-3. Análise Comparativa
-Com ambos os acórdãos em mãos, a análise comparativa será realizada em três etapas:
+# API de Análise Comparativa de Acórdãos
 
-a) Comparação dos Fatos e Alegações:
-Semelhanças e Diferenças: Identificação das similaridades e discrepâncias entre os fatos narrados e os argumentos apresentados pelas partes em cada decisão.
-b) Comparação da Fundamentação Jurídica e Normas Aplicadas:
-Fundamentos e Artigos Invocados: Análise dos dispositivos legais utilizados pelos tribunais, destacando como cada um aplicou a lei federal e se houve divergência na interpretação dos artigos.
-c) Comparação das Conclusões:
-Desfechos dos Casos: Verificação se as decisões foram convergentes ou divergentes, considerando a aplicação das normas e os argumentos apresentados.
-Divergência de Entendimento: Esclarecimento de como a interpretação da lei federal se deu de forma diversa, o que justifica o cabimento do Recurso Especial.
-4. Tabela Comparativa
-Para facilitar a visualização dos elementos analisados, será elaborada uma tabela comparativa que sintetiza os seguintes aspectos de cada acórdão:
+Esta API permite comparar acórdãos jurídicos através de dois métodos de entrada:
 
-Fatos Narrados:
-Resumo dos acontecimentos principais de cada caso.
-Problema Principal:
-Identificação do cerne da controvérsia em cada decisão.
-Pedidos das Partes:
-Resumo das demandas formuladas pelos litigantes.
-Fundamentação Jurídica:
-Detalhamento dos dispositivos legais e artigos aplicados em cada acórdão.
-Decisão Final:
-Síntese do entendimento do tribunal, com ênfase na divergência de interpretação.
-Objetivo Final
-O procedimento descrito visa demonstrar que, em casos semelhantes, a lei federal foi interpretada de maneira diversa por tribunais distintos, evidenciando o chamado dissídio jurisprudencial. Essa divergência é o elemento-chave para o cabimento do Recurso Especial, conforme previsto no artigo 105, III, "C", da Constituição Federal.
+- **Versão TEXTO:** Envio dos acórdãos como conteúdo textual via formulário.
+- **Versão PDF:** Upload dos acórdãos em formato PDF, com extração do texto e geração dos resumos.
+
+---
+
+## Orientações para Executar a API
+
+**Sugestão de versão do Python:** 3.10 ou superior
+
+### 1. Criação e Ativação do Ambiente Virtual
+
+Crie o ambiente virtual:
+```bash
+python -m venv venv
+```
+
+Ative o ambiente virtual:
+
+- **No Windows:**
+  ```bash
+  venv\Scripts\activate
+  ```
+- **No Linux/MacOS:**
+  ```bash
+  source venv/bin/activate
+  ```
+
+### 2. Instalação das Bibliotecas
+
+Instale as dependências:
+```bash
+pip install -r requirements.txt
+```
+
+### 3. Configuração das Variáveis de Ambiente
+
+Copie o arquivo `.env.sample` para `.env` e preencha as variáveis necessárias (por exemplo, a variável `GROQ_API_KEY`):
+
+- **No Linux/MacOS:**
+  ```bash
+  cp .env.sample .env
+  ```
+- **No Windows:**
+  ```bash
+  copy .env.sample .env
+  ```
+
+### 4. Execução da API
+
+Para executar a API em ambiente de desenvolvimento:
+```bash
+fastapi dev main.py
+```
+
+Para executar a API em ambiente de produção:
+```bash
+fastapi run main.py
+```
+
+## Endpoints Disponíveis
+
+### Versão TEXTO
+
+**POST /comparar_acordaos_text**  
+Recebe dois acórdãos em formato de texto via formulário, gera os resumos e realiza a análise comparativa.
+
+### Versão PDF
+
+**POST /analisar_acordao_pdf_1**  
+Recebe o primeiro arquivo PDF, extrai o texto, gera o resumo e o armazena.
+
+**POST /analisar_acordao_pdf_2**  
+Recebe o segundo arquivo PDF, extrai o texto, gera o resumo e o armazena.
+
+**POST /comparar_acordaos_pdf**  
+Utiliza os resumos gerados a partir dos PDFs para realizar a análise comparativa.
+
+## Observações
+
+**Armazenamento dos Resumos (Versão PDF):**  
+Nesta implementação, os resumos dos acórdãos processados via PDF são armazenados em memória (variável global). Em ambientes com múltiplos usuários, recomenda-se utilizar uma estratégia de armazenamento mais robusta, como um banco de dados ou um mecanismo de sessão.
+
+**Limitações de Tokens:**  
+Certifique-se de que os textos enviados para a LLM não excedam os limites de tokens do modelo. Se necessário, adote técnicas de chunking para dividir textos muito longos.
+
+Com estas instruções você estará pronto para executar a API e comparar acórdãos utilizando o método que melhor se adequar às suas necessidades.
+
