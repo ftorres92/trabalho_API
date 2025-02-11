@@ -1,6 +1,5 @@
 import os
 from fastapi import FastAPI, HTTPException, Form
-from pydantic import BaseModel
 from groq import Groq
 from dotenv import load_dotenv
 
@@ -18,11 +17,6 @@ if not API_KEY:
 
 client = Groq(api_key=API_KEY)
 
-# Modelo de entrada unificado
-class AcordaosInput(BaseModel):
-    acordao_1: str
-    acordao_2: str
-
 def executar_prompt(prompt: str) -> str:
     """
     Envia um prompt para a Groq LLM e retorna a resposta gerada.
@@ -37,7 +31,7 @@ def executar_prompt(prompt: str) -> str:
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro na LLM: {str(e)}")
 
-def gerar_resumo(acordao: str = Form (...)) -> str:
+def gerar_resumo(acordao: str) -> str:
     """
     Gera o resumo de um acórdão utilizando a LLM.
     """
@@ -62,13 +56,13 @@ def gerar_resumo(acordao: str = Form (...)) -> str:
     return executar_prompt(prompt)
 
 @app.post("/comparar_acordaos")
-def comparar_acordaos(acordaos: AcordaosInput):
+def comparar_acordaos(acordao_1: str = Form(...), acordao_2: str = Form(...)):
     """
-    Recebe dois acórdãos, gera os resumos de cada um e realiza a análise comparativa.
+    Recebe dois acórdãos via formulário, gera os resumos de cada um e realiza a análise comparativa.
     """
     # Gera os resumos para cada acórdão
-    resumo_1 = gerar_resumo(acordaos.acordao_1)
-    resumo_2 = gerar_resumo(acordaos.acordao_2)
+    resumo_1 = gerar_resumo(acordao_1)
+    resumo_2 = gerar_resumo(acordao_2)
     
     # Cria o prompt para comparação
     prompt_comparativo = f"""
