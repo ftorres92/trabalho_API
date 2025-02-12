@@ -5,43 +5,88 @@ from groq import Groq
 from dotenv import load_dotenv
 from PyPDF2 import PdfReader
 
-# Carrega variáveis do .env
+# ------------------------------------------------------------------------------
+# 1. Carregamento das Variáveis de Ambiente e Configuração de Logging
+# ------------------------------------------------------------------------------
+
+# Carrega as variáveis definidas no arquivo .env para a aplicação.
 load_dotenv()
 
-# Configuração de logging
+# Configuração do módulo de logging para registrar eventos, informações e erros.
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Instancia o FastAPI com título e versão
+# ------------------------------------------------------------------------------
+# 2. Instanciação da Aplicação FastAPI e Configuração de Versionamento
+# ------------------------------------------------------------------------------
+
+# Cria a aplicação FastAPI com título, versão e descrição.
 app = FastAPI(
     title="API de Análise Comparativa de Acórdãos",
     version="1.0",
     description="Serviços de IA para resumo e comparação de acórdãos (texto e PDF)"
 )
 
-# Criação do router com prefixo /v1 (versionamento)
+# Criação de um router com prefixo '/v1' para implementar o versionamento da API.
 router = APIRouter(prefix="/v1")
 
-# Configuração da API Groq
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-MODEL_NAME = "llama3-70b-8192"  # Modelo da Groq que será utilizado
+# ------------------------------------------------------------------------------
+# 3. Configuração do Serviço de IA (Groq) e Checagem de Variáveis Necessárias
+# ------------------------------------------------------------------------------
 
+# Obtém a chave da API do serviço Groq a partir do .env.
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+# Define o modelo de linguagem (LLM) a ser utilizado.
+MODEL_NAME = "llama3-70b-8192"
+
+# Se a chave da API não estiver definida, interrompe a execução com erro.
 if not GROQ_API_KEY:
     raise ValueError("A variável de ambiente GROQ_API_KEY não está definida!")
 
+# Cria o cliente Groq que será usado para enviar prompts à LLM.
 client = Groq(api_key=GROQ_API_KEY)
 
-# Dependência de segurança: validação da API key (passada no header x-api-key)
+# ------------------------------------------------------------------------------
+# 4. Implementação da Autenticação via API Key
+# ------------------------------------------------------------------------------
+
 def get_api_key(x_api_key: str = Header(...)):
+    """
+    Função de dependência para validar a API key enviada no header 'x-api-key'.
+    Compara o valor recebido com o esperado (definido no .env ou padrão).
+        Valida a chave de API fornecida no header da requisição.
+
+    Args:
+        x_api_key (str): Chave de API fornecida no header 'x-api-key' da requisição
+
+    Returns:
+        str: A chave de API validada
+
+    Raises:
+        HTTPException: Quando a chave de API fornecida não corresponde à chave esperada
+            - status_code: 401
+            - detail: "Chave de API inválida"
+
+    Observações:
+        - A chave esperada é obtida da variável de ambiente 'API_KEY'
+        - Se a variável de ambiente não estiver definida, usa 'minha-chave-padrao'
+        - Em caso de chave inválida, registra um aviso no logger
+
+    """
     API_KEY_EXPECTED = os.getenv("API_KEY", "minha-chave-padrao")
     if x_api_key != API_KEY_EXPECTED:
         logger.warning("Tentativa de acesso com chave de API inválida: %s", x_api_key)
         raise HTTPException(status_code=401, detail="Chave de API inválida")
     return x_api_key
 
+# ------------------------------------------------------------------------------
+# 5. Funções Auxiliares: Comunicação com a LLM e Processamento de Textos
+# ------------------------------------------------------------------------------
+
 def executar_prompt(prompt: str) -> str:
     """
-    Envia um prompt para a LLM via Groq e retorna a resposta gerada.
+    Envia um prompt para a LLM via Groq e retorna a resposta.
+    Em caso de erro, registra o erro e lança uma exceção HTTP.
     """
     try:
         response = client.chat.completions.create(
@@ -57,7 +102,8 @@ def executar_prompt(prompt: str) -> str:
 
 def gerar_resumo(acordao: str) -> str:
     """
-    Gera o resumo de um acórdão utilizando a LLM.
+    Gera um resumo para o acórdão fornecido.
+    Cria um prompt detalhado para instruir a LLM a resumir o texto e retorna o resultado.
     """
     prompt = f"""
 Você é um assistente jurídico especializado em análise de acórdãos.
@@ -82,7 +128,9 @@ Você é um assistente jurídico especializado em análise de acórdãos.
 
 def extract_text_from_pdf(pdf_file: UploadFile) -> str:
     """
-    Extrai o texto de um arquivo PDF utilizando o PyPDF2.
+    Extrai o texto de um arquivo PDF usando a biblioteca PyPDF2.
+    Itera sobre todas as páginas do PDF e concatena o texto extraído.
+    Em caso de erro, registra e lança uma exceção HTTP.
     """
     try:
         pdf_reader = PdfReader(pdf_file.file)
@@ -97,13 +145,18 @@ def extract_text_from_pdf(pdf_file: UploadFile) -> str:
         logger.error("Erro ao ler PDF: %s", str(e))
         raise HTTPException(status_code=400, detail="Erro ao ler o arquivo PDF: " + str(e))
 
-# -------------------------
-# Versão com entrada em TEXTO
-# -------------------------
+# ------------------------------------------------------------------------------
+# 6. Endpoints - Versão TEXTO
+# ------------------------------------------------------------------------------
+
 @router.post("/comparar_acordaos_text", dependencies=[Depends(get_api_key)])
 def comparar_acordaos_text(acordao_1: str = Form(...), acordao_2: str = Form(...)):
     """
-    Recebe dois acórdãos via formulário (em formato de texto), gera os resumos e realiza a análise comparativa.
+    Endpoint para comparar dois acórdãos enviados como texto.
+    - Recebe os acórdãos via formulário.
+    - Gera um resumo para cada acórdão utilizando a LLM.
+    - Monta um prompt para a comparação dos resumos.
+    - Retorna a análise comparativa.
     """
     logger.info("Iniciando comparação de acórdãos (versão TEXTO).")
     resumo_1 = gerar_resumo(acordao_1)
@@ -135,16 +188,20 @@ Você é um assistente jurídico especializado em análise comparativa de acórd
     logger.info("Comparação (TEXTO) concluída com sucesso.")
     return {"analise_comparativa": analise, "mensagem": "Comparação concluída com sucesso (versão TEXTO)!"}
 
-# -------------------------
-# Versão com upload de ARQUIVOS PDF
-# -------------------------
+# ------------------------------------------------------------------------------
+# 7. Endpoints - Versão PDF
+# ------------------------------------------------------------------------------
+
 # Dicionário para armazenar os resumos dos acórdãos processados via PDF.
 resumos_acordaos = {}
 
 @router.post("/analisar_acordao_pdf_1", dependencies=[Depends(get_api_key)])
 def analisar_acordao_pdf_1(acordao: UploadFile = File(...)):
     """
-    Recebe o primeiro arquivo PDF, extrai o texto, gera o resumo e o armazena.
+    Endpoint para processar o primeiro acórdão enviado em formato PDF.
+    - Extrai o texto do PDF.
+    - Gera o resumo do acórdão.
+    - Armazena o resumo para uso posterior na comparação.
     """
     logger.info("Processando primeiro acórdão (PDF).")
     texto = extract_text_from_pdf(acordao)
@@ -156,7 +213,10 @@ def analisar_acordao_pdf_1(acordao: UploadFile = File(...)):
 @router.post("/analisar_acordao_pdf_2", dependencies=[Depends(get_api_key)])
 def analisar_acordao_pdf_2(acordao: UploadFile = File(...)):
     """
-    Recebe o segundo arquivo PDF, extrai o texto, gera o resumo e o armazena.
+    Endpoint para processar o segundo acórdão enviado em formato PDF.
+    - Extrai o texto do PDF.
+    - Gera o resumo do acórdão.
+    - Armazena o resumo para uso posterior na comparação.
     """
     logger.info("Processando segundo acórdão (PDF).")
     texto = extract_text_from_pdf(acordao)
@@ -168,7 +228,11 @@ def analisar_acordao_pdf_2(acordao: UploadFile = File(...)):
 @router.post("/comparar_acordaos_pdf", dependencies=[Depends(get_api_key)])
 def comparar_acordaos_pdf():
     """
-    Realiza a comparação dos resumos gerados a partir dos PDFs enviados previamente.
+    Endpoint para comparar os acórdãos processados via PDF.
+    - Recupera os resumos gerados previamente.
+    - Valida se ambos os resumos foram processados.
+    - Monta um prompt comparativo e obtém a análise da LLM.
+    - Retorna o resultado da comparação.
     """
     logger.info("Iniciando comparação de acórdãos (versão PDF).")
     resumo_1 = resumos_acordaos.get("acordao_1")
@@ -207,5 +271,9 @@ Você é um assistente jurídico especializado em análise comparativa de acórd
     logger.info("Comparação (PDF) concluída com sucesso.")
     return {"analise_comparativa": analise, "mensagem": "Comparação concluída com sucesso (versão PDF)!"}
 
-# Inclui o router versionado na aplicação
+# ------------------------------------------------------------------------------
+# 8. Inclusão do Router Versionado na Aplicação
+# ------------------------------------------------------------------------------
+
+# Adiciona o router com prefixo /v1 à aplicação principal.
 app.include_router(router)
