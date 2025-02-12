@@ -1,5 +1,6 @@
 import os
-from fastapi import FastAPI, HTTPException, Form, UploadFile, File
+import logging
+from fastapi import FastAPI, APIRouter, HTTPException, Form, UploadFile, File, Depends, Header
 from groq import Groq
 from dotenv import load_dotenv
 from PyPDF2 import PdfReader
@@ -7,20 +8,40 @@ from PyPDF2 import PdfReader
 # Carrega variáveis do .env
 load_dotenv()
 
-app = FastAPI()
+# Configuração de logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Instancia o FastAPI com título e versão
+app = FastAPI(
+    title="API de Análise Comparativa de Acórdãos",
+    version="1.0",
+    description="Serviços de IA para resumo e comparação de acórdãos (texto e PDF)"
+)
+
+# Criação do router com prefixo /v1 (versionamento)
+router = APIRouter(prefix="/v1")
 
 # Configuração da API Groq
-API_KEY = os.getenv("GROQ_API_KEY")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 MODEL_NAME = "llama3-70b-8192"  # Modelo da Groq que será utilizado
 
-if not API_KEY:
+if not GROQ_API_KEY:
     raise ValueError("A variável de ambiente GROQ_API_KEY não está definida!")
 
-client = Groq(api_key=API_KEY)
+client = Groq(api_key=GROQ_API_KEY)
+
+# Dependência de segurança: validação da API key (passada no header x-api-key)
+def get_api_key(x_api_key: str = Header(...)):
+    API_KEY_EXPECTED = os.getenv("API_KEY", "minha-chave-padrao")
+    if x_api_key != API_KEY_EXPECTED:
+        logger.warning("Tentativa de acesso com chave de API inválida: %s", x_api_key)
+        raise HTTPException(status_code=401, detail="Chave de API inválida")
+    return x_api_key
 
 def executar_prompt(prompt: str) -> str:
     """
-    Envia um prompt para a LLM e retorna a resposta gerada.
+    Envia um prompt para a LLM via Groq e retorna a resposta gerada.
     """
     try:
         response = client.chat.completions.create(
@@ -28,8 +49,10 @@ def executar_prompt(prompt: str) -> str:
             model=MODEL_NAME,
             stream=False,
         )
+        logger.info("Prompt executado com sucesso.")
         return response.choices[0].message.content
     except Exception as e:
+        logger.error("Erro na LLM: %s", str(e))
         raise HTTPException(status_code=500, detail=f"Erro na LLM: {str(e)}")
 
 def gerar_resumo(acordao: str) -> str:
@@ -54,6 +77,7 @@ Você é um assistente jurídico especializado em análise de acórdãos.
 - Normas Aplicadas:
 - Decisão Final:
 """
+    logger.info("Gerando resumo do acórdão...")
     return executar_prompt(prompt)
 
 def extract_text_from_pdf(pdf_file: UploadFile) -> str:
@@ -67,24 +91,24 @@ def extract_text_from_pdf(pdf_file: UploadFile) -> str:
             page_text = page.extract_text()
             if page_text:
                 text += page_text + "\n"
+        logger.info("Texto extraído do PDF com sucesso.")
         return text
     except Exception as e:
+        logger.error("Erro ao ler PDF: %s", str(e))
         raise HTTPException(status_code=400, detail="Erro ao ler o arquivo PDF: " + str(e))
 
 # -------------------------
 # Versão com entrada em TEXTO
 # -------------------------
-
-@app.post("/comparar_acordaos_text", tags=["primeira versão, sem expor o resumo"])
+@router.post("/comparar_acordaos_text", dependencies=[Depends(get_api_key)])
 def comparar_acordaos_text(acordao_1: str = Form(...), acordao_2: str = Form(...)):
     """
     Recebe dois acórdãos via formulário (em formato de texto), gera os resumos e realiza a análise comparativa.
     """
-    # Gera os resumos para cada acórdão
+    logger.info("Iniciando comparação de acórdãos (versão TEXTO).")
     resumo_1 = gerar_resumo(acordao_1)
     resumo_2 = gerar_resumo(acordao_2)
     
-    # Cria o prompt para comparação
     prompt_comparativo = f"""
 Você é um assistente jurídico especializado em análise comparativa de acórdãos.
 
@@ -108,44 +132,50 @@ Você é um assistente jurídico especializado em análise comparativa de acórd
 - Tabela Comparativa:
 """
     analise = executar_prompt(prompt_comparativo)
+    logger.info("Comparação (TEXTO) concluída com sucesso.")
     return {"analise_comparativa": analise, "mensagem": "Comparação concluída com sucesso (versão TEXTO)!"}
 
 # -------------------------
 # Versão com upload de ARQUIVOS PDF
 # -------------------------
-
 # Dicionário para armazenar os resumos dos acórdãos processados via PDF.
 resumos_acordaos = {}
 
-@app.post("/analisar_acordao_pdf_1", tags=["segunda versão-divindo a tarefa"])
+@router.post("/analisar_acordao_pdf_1", dependencies=[Depends(get_api_key)])
 def analisar_acordao_pdf_1(acordao: UploadFile = File(...)):
     """
     Recebe o primeiro arquivo PDF, extrai o texto, gera o resumo e o armazena.
     """
+    logger.info("Processando primeiro acórdão (PDF).")
     texto = extract_text_from_pdf(acordao)
     resumo = gerar_resumo(texto)
     resumos_acordaos["acordao_1"] = resumo
+    logger.info("Primeiro acórdão (PDF) processado com sucesso.")
     return {"resumo_acordao_1": resumo, "mensagem": "Primeiro acórdão processado com sucesso (PDF)."}
 
-@app.post("/analisar_acordao_pdf_2", tags=["segunda versão-divindo a tarefa"])
+@router.post("/analisar_acordao_pdf_2", dependencies=[Depends(get_api_key)])
 def analisar_acordao_pdf_2(acordao: UploadFile = File(...)):
     """
     Recebe o segundo arquivo PDF, extrai o texto, gera o resumo e o armazena.
     """
+    logger.info("Processando segundo acórdão (PDF).")
     texto = extract_text_from_pdf(acordao)
     resumo = gerar_resumo(texto)
     resumos_acordaos["acordao_2"] = resumo
+    logger.info("Segundo acórdão (PDF) processado com sucesso.")
     return {"resumo_acordao_2": resumo, "mensagem": "Segundo acórdão processado com sucesso (PDF)."}
 
-@app.post("/comparar_acordaos_pdf", tags=["segunda versão-divindo a tarefa"])
+@router.post("/comparar_acordaos_pdf", dependencies=[Depends(get_api_key)])
 def comparar_acordaos_pdf():
     """
     Realiza a comparação dos resumos gerados a partir dos PDFs enviados previamente.
     """
+    logger.info("Iniciando comparação de acórdãos (versão PDF).")
     resumo_1 = resumos_acordaos.get("acordao_1")
     resumo_2 = resumos_acordaos.get("acordao_2")
     
     if not resumo_1 or not resumo_2:
+        logger.error("Resumos incompletos: primeiro ou segundo acórdão não processado.")
         raise HTTPException(
             status_code=400,
             detail="Os resumos de ambos os acórdãos não foram gerados. Por favor, processe ambos antes de comparar."
@@ -174,4 +204,8 @@ Você é um assistente jurídico especializado em análise comparativa de acórd
 - Tabela Comparativa:
 """
     analise = executar_prompt(prompt_comparativo)
+    logger.info("Comparação (PDF) concluída com sucesso.")
     return {"analise_comparativa": analise, "mensagem": "Comparação concluída com sucesso (versão PDF)!"}
+
+# Inclui o router versionado na aplicação
+app.include_router(router)
