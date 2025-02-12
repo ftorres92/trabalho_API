@@ -19,8 +19,21 @@ client = Groq(api_key=GROQ_API_KEY)
 
 def executar_prompt(prompt: str) -> str:
     """
-    Envia um prompt para a LLM via Groq e retorna a resposta gerada.
-    Em caso de erro, lança uma exceção HTTP.
+    Envia um prompt para a LLM via Groq e retorna a resposta gerada. Em caso de erro, lança uma exceção HTTP.
+        Args:
+        prompt (str): O texto do prompt a ser enviado para a LLM.
+
+    Returns:
+        str: A resposta gerada pela LLM.
+
+    Raises:
+        HTTPException: Quando ocorre um erro na comunicação com a LLM, 
+                      com status code 500 e mensagem detalhando o erro.
+
+    Example:
+        resposta = executar_prompt("Qual é a capital do Brasil?")
+        print(resposta)
+        "Brasília é a capital do Brasil."
     """
     try:
         response = client.chat.completions.create(
@@ -35,9 +48,29 @@ def executar_prompt(prompt: str) -> str:
         raise HTTPException(status_code=500, detail=f"Erro na LLM: {str(e)}")
 
 def gerar_resumo(acordao: str) -> str:
+ 
     """
-    Gera um resumo para o acórdão fornecido.
-    Prepara um prompt detalhado para instruir a LLM a resumir o texto e retorna o resultado.
+    Esta função recebe o texto de um acórdão e retorna um resumo estruturado contendo
+    os fatos relevantes, alegações principais, normas aplicadas e decisão final.
+    O resumo é gerado utilizando um modelo de linguagem (LLM) especializado em análise jurídica.
+
+    Args:
+        acordao (str): Texto completo do acórdão a ser resumido.
+
+    Returns:
+        str: Resumo estruturado do acórdão contendo:
+            - Fatos Relevantes
+            - Alegações Principais
+            - Normas Aplicadas 
+            - Decisão Final
+
+    Raises:
+        Pode levantar exceções relacionadas à execução do prompt no LLM subjacente.
+
+    Example:
+            texto_acordao = "..."
+            resumo = gerar_resumo(texto_acordao)
+            print(resumo)
     """
     prompt = f"""
 Você é um assistente jurídico especializado em análise de acórdãos.

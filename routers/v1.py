@@ -11,11 +11,39 @@ router = APIRouter(prefix="/v1")
 resumos_acordaos = {}
 
 @router.post("/comparar_acordaos_text", dependencies=[Depends(get_api_key)])
+
 def comparar_acordaos_text(acordao_1: str = Form(...), acordao_2: str = Form(...)):
     """
     Endpoint para comparar dois acórdãos enviados como texto.
     - Gera um resumo para cada acórdão utilizando a LLM.
     - Monta um prompt para comparar os resumos e retorna a análise comparativa.
+        ----------
+        acordao_1 : str
+            Texto completo do primeiro acórdão a ser comparado
+        acordao_2 : str
+            Texto completo do segundo acórdão a ser comparado
+        Returns
+        -------
+        dict
+            Dicionário contendo:
+                - analise_comparativa: str
+                    Análise detalhada comparando os dois acórdãos, incluindo:
+                    * Comparação dos fatos
+                    * Comparação das alegações
+                    * Diferenças na fundamentação jurídica
+                    * Divergência na decisão final
+                    * Tabela comparativa
+                - mensagem: str
+                    Mensagem indicando o sucesso da operação
+        Requires
+        --------
+        API Key válida através da dependência get_api_key
+        Notes
+        -----
+        A comparação é feita em várias etapas:
+        1. Geração de resumos para cada acórdão
+        2. Criação de um prompt especializado para análise comparativa
+        3. Processamento através de LLM para gerar a análise final
     """
     logger.info("Iniciando comparação de acórdãos (versão TEXTO).")
     resumo_1 = gerar_resumo(acordao_1)
@@ -47,13 +75,41 @@ Você é um assistente jurídico especializado em análise comparativa de acórd
     logger.info("Comparação (TEXTO) concluída com sucesso.")
     return {"analise_comparativa": analise, "mensagem": "Comparação concluída com sucesso (versão TEXTO)!"}
 
+
+"""
+-----------------------
+SEGUNDA FORMA- ENDPOINT QUE RESUME OS ACÓRDÃOS E OUTRO QUE REALIZA A COMPARAÇÃO ENTRE ELES
+-----------------------
+"""
+
+
 @router.post("/analisar_acordao_pdf_1", dependencies=[Depends(get_api_key)])
+
 def analisar_acordao_pdf_1(acordao: UploadFile = File(...)):
     """
     Endpoint para processar o primeiro acórdão enviado em formato PDF.
     - Extrai o texto do PDF.
     - Gera o resumo do acórdão.
     - Armazena o resumo para posterior comparação.
+
+    Parâmetros:
+    acordao (UploadFile): Arquivo PDF contendo o acórdão a ser analisado
+
+    Retorna:
+        dict: Dicionário contendo:
+            - resumo_acordao_1: Texto do resumo gerado para o acórdão
+            - mensagem: Mensagem de confirmação do processamento
+
+    Fluxo:
+        1. Extrai o texto do arquivo PDF
+        2. Gera um resumo do texto extraído
+        3. Armazena o resumo em memória para posterior comparação
+
+    Dependências:
+        - Requer autenticação via API key (get_api_key)
+
+    Raises:
+        HTTPException: Se houver erro no processamento do arquivo ou geração do resumo
     """
     logger.info("Processando primeiro acórdão (PDF).")
     texto = extract_text_from_pdf(acordao)
@@ -62,13 +118,11 @@ def analisar_acordao_pdf_1(acordao: UploadFile = File(...)):
     logger.info("Primeiro acórdão (PDF) processado com sucesso.")
     return {"resumo_acordao_1": resumo, "mensagem": "Primeiro acórdão processado com sucesso (PDF)."}
 
+
 @router.post("/analisar_acordao_pdf_2", dependencies=[Depends(get_api_key)])
 def analisar_acordao_pdf_2(acordao: UploadFile = File(...)):
     """
-    Endpoint para processar o segundo acórdão enviado em formato PDF.
-    - Extrai o texto do PDF.
-    - Gera o resumo do acórdão.
-    - Armazena o resumo para posterior comparação.
+    Endpoint para processar o segundo acórdão enviado em formato PDF.(....)
     """
     logger.info("Processando segundo acórdão (PDF).")
     texto = extract_text_from_pdf(acordao)
@@ -78,11 +132,32 @@ def analisar_acordao_pdf_2(acordao: UploadFile = File(...)):
     return {"resumo_acordao_2": resumo, "mensagem": "Segundo acórdão processado com sucesso (PDF)."}
 
 @router.post("/comparar_acordaos_pdf", dependencies=[Depends(get_api_key)])
+
 def comparar_acordaos_pdf():
     """
-    Endpoint para comparar os acórdãos processados via PDF.
-    - Recupera os resumos gerados previamente.
-    - Monta um prompt comparativo e retorna a análise realizada pela LLM.
+    Endpoint para comparar dois acórdãos processados via PDF.
+    Este endpoint realiza uma análise comparativa entre dois acórdãos previamente 
+    processados e armazenados em memória. A comparação é feita através de um modelo
+    de linguagem que analisa os resumos gerados anteriormente.
+    Returns:
+        dict: Um dicionário contendo:
+            - analise_comparativa (str): Análise detalhada comparando os dois acórdãos
+            - mensagem (str): Mensagem indicando o sucesso da operação
+    Raises:
+        HTTPException: 
+            - status_code=400: Se um ou ambos os resumos dos acórdãos não foram 
+            previamente processados e armazenados.
+    Dependências:
+        - Requer autenticação via API key (dependency: get_api_key)
+        - Requer que os resumos dos acórdãos tenham sido previamente gerados e 
+        armazenados em 'resumos_acordaos'
+    Notas:
+        A análise comparativa inclui:
+        - Comparação dos fatos apresentados
+        - Comparação das alegações
+        - Análise das diferenças na fundamentação jurídica
+        - Identificação de divergências na interpretação da lei federal
+        - Tabela comparativa com os principais pontos
     """
     logger.info("Iniciando comparação de acórdãos (versão PDF).")
     resumo_1 = resumos_acordaos.get("acordao_1")

@@ -102,6 +102,3 @@ Nesta implementação, os resumos dos acórdãos processados via PDF são armaze
 
 **Limitações de Tokens:**  
 Certifique-se de que os textos enviados para a LLM não excedam os limites de tokens do modelo. Se necessário, adote técnicas de chunking para dividir textos muito longos.
-
-Com estas instruções você estará pronto para executar a API e comparar acórdãos utilizando o método que melhor se adequar às suas necessidades.
-

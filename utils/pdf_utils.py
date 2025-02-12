@@ -5,9 +5,25 @@ from PyPDF2 import PdfReader
 logger = logging.getLogger(__name__)
 
 def extract_text_from_pdf(pdf_file) -> str:
+
     """
-    Extrai o texto de um arquivo PDF utilizando PyPDF2.
-    Itera sobre cada página do PDF e concatena o texto extraído.
+        Extrai o texto de um arquivo PDF.
+
+    Args:
+        pdf_file: Arquivo PDF enviado através de um FastAPI UploadFile.
+
+    Returns:
+        str: Texto extraído do PDF, com quebras de linha entre as páginas.
+
+    Raises:
+        HTTPException: Se houver erro na leitura do arquivo PDF, retorna erro 400
+            com mensagem detalhada.
+
+    Exemplos:
+        pdf_file = UploadFile(...)
+        text = extract_text_from_pdf(pdf_file)
+        print(text)
+        'Conteúdo da página 1\nConteúdo da página 2\n...'
     """
     try:
         pdf_reader = PdfReader(pdf_file.file)
