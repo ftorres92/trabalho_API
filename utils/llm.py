@@ -12,7 +12,12 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 MODEL_NAME = "llama3-70b-8192"  # Modelo da Groq que será utilizado
 
 if not GROQ_API_KEY:
-    raise ValueError("A variável de ambiente GROQ_API_KEY não está definida!")
+    raise ValueError(
+        "A variável de ambiente GROQ_API_KEY não está definida!\n"
+        "1. Crie uma conta em https://console.groq.com\n"
+        "2. Obtenha sua chave de API\n"
+        "3. Adicione a chave no arquivo .env"
+    )
 
 # Criação do cliente Groq para interagir com a LLM
 client = Groq(api_key=GROQ_API_KEY)

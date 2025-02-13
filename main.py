@@ -1,4 +1,5 @@
 import os
+
 import logging
 from fastapi import FastAPI
 from routers import v1  # importa o router da versão 1
@@ -15,7 +16,10 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="API de Análise Comparativa de Acórdãos",
     version="1.0",
-    description="Serviços de IA para resumo e comparação de acórdãos (texto e PDF)"
+    description="Serviços de IA para resumo e comparação de acórdãos (texto e PDF)", 
+    contact={
+        "name": "Fernando Torres",
+        "url": "http://github.com/ftorres92/"},
 )
 
 # Inclui o router com prefixo /v1 na aplicação
