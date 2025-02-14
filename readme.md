@@ -65,6 +65,8 @@ Copie o arquivo `.env.sample` para `.env` e preencha as variáveis necessárias 
   copy .env.sample .env
   ```
 
+Você também pode retirar o .sample do nome do arquivo e inserir a chave no próprio arquivo
+
 ### 4. Execução da API
 
 Para executar a API em ambiente de desenvolvimento:
