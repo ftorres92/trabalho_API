@@ -3,8 +3,32 @@
 env
 env/
 
-__pychace__
-/__pychace__
-/__pychace__/
-__pychace__/
+# Ignorar diretórios de cache do Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignorar caches do pip
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Ignorar caches do Jupyter Notebook
+.ipynb_checkpoints/
+
+# Ignorar caches do macOS e Linux
+.DS_Store
+.cache/
+*.swp
+
+# Ignorar caches do VSCode
+.vscode/
+.vscode/*
+*.code-workspace
+
+# Ignorar caches do Docker
+*.pid
+*.log
+/tmp/
+
 
