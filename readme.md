@@ -100,7 +100,7 @@ Utiliza os resumos gerados a partir dos PDFs para realizar a análise comparativ
 ## Observações
 
 **Armazenamento dos Resumos (Versão PDF):**  
-Nesta implementação, os resumos dos acórdãos processados via PDF são armazenados em memória (variável global). Em ambientes com múltiplos usuários, recomenda-se utilizar uma estratégia de armazenamento mais robusta, como um banco de dados ou um mecanismo de sessão.
+Nesta implementação, os resumos dos acórdãos processados via PDF são armazenados em memória (variável global).
 
 **Limitações de Tokens:**  
 Certifique-se de que os textos enviados para a LLM não excedam os limites de tokens do modelo. Se necessário, adote técnicas de chunking para dividir textos muito longos.
