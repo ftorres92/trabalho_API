@@ -10,7 +10,7 @@ router = APIRouter(prefix="/v1")
 # Dicionário para armazenar os resumos dos acórdãos enviados via PDF.
 resumos_acordaos = {}
 
-@router.post("/comparar_acordaos_text", dependencies=[Depends(get_api_key)])
+@router.post("/comparar_acordaos_text",tags=["primeira forma- endpoint único"], dependencies=[Depends(get_api_key)])
 
 def comparar_acordaos_text(acordao_1: str = Form(...), acordao_2: str = Form(...)):
     """
@@ -83,7 +83,7 @@ SEGUNDA FORMA- ENDPOINT QUE RESUME OS ACÓRDÃOS E OUTRO QUE REALIZA A COMPARAÇ
 """
 
 
-@router.post("/analisar_acordao_pdf_1", dependencies=[Depends(get_api_key)])
+@router.post("/analisar_acordao_pdf_1", tags=["segunda forma- três endpoints"], dependencies=[Depends(get_api_key)])
 
 def analisar_acordao_pdf_1(acordao: UploadFile = File(...)):
     """
@@ -119,7 +119,7 @@ def analisar_acordao_pdf_1(acordao: UploadFile = File(...)):
     return {"resumo_acordao_1": resumo, "mensagem": "Primeiro acórdão processado com sucesso (PDF)."}
 
 
-@router.post("/analisar_acordao_pdf_2", dependencies=[Depends(get_api_key)])
+@router.post("/analisar_acordao_pdf_2", tags=["segunda forma- três endpoints"], dependencies=[Depends(get_api_key)])
 def analisar_acordao_pdf_2(acordao: UploadFile = File(...)):
     """
     Endpoint para processar o segundo acórdão enviado em formato PDF.(....)
@@ -131,7 +131,7 @@ def analisar_acordao_pdf_2(acordao: UploadFile = File(...)):
     logger.info("Segundo acórdão (PDF) processado com sucesso.")
     return {"resumo_acordao_2": resumo, "mensagem": "Segundo acórdão processado com sucesso (PDF)."}
 
-@router.post("/comparar_acordaos_pdf", dependencies=[Depends(get_api_key)])
+@router.post("/comparar_acordaos_pdf", tags=["segunda forma- três endpoints"], dependencies=[Depends(get_api_key)])
 
 def comparar_acordaos_pdf():
     """

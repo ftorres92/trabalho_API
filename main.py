@@ -16,9 +16,9 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="API de Análise Comparativa de Acórdãos",
     version="1.0",
-    description="Serviços de IA para resumo e comparação de acórdãos (texto e PDF)", 
+    description="Serviços de IA para resumo e comparação de acórdãos (texto e PDF), com o objetivo de auxiliar na elaboração de Recurso Especial", 
     contact={
-        "name": "Fernando Torres",
+        "name": "Fernando Torres, Fernando Lobo, Marcio Ferreira",
         "url": "http://github.com/ftorres92/"},
 )
 
